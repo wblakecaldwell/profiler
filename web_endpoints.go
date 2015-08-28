@@ -8,6 +8,8 @@ import (
 	"net/http"
 	"sync"
 	"time"
+
+	"github.com/gin-gonic/gin"
 )
 
 // Commands HTTP endpoints send to the management goroutine
@@ -94,39 +96,43 @@ func init() {
 }
 
 // AddMemoryProfilingHandlers adds the memory profiling handlers
-func AddMemoryProfilingHandlers() {
-	http.HandleFunc("/profiler/info.html", MemStatsHTMLHandler)
-	http.HandleFunc("/profiler/info", ProfilingInfoJSONHandler)
-	http.HandleFunc("/profiler/start", StartProfilingHandler)
-	http.HandleFunc("/profiler/stop", StopProfilingHandler)
+func AddMemoryProfilingHandlers(router *gin.Engine) {
+	log.Println("AddMemoryProfilingHandlers")
+	router.GET("/profiler/info.html", MemStatsHTMLHandler)
+	router.GET("/profiler/info", ProfilingInfoJSONHandler)
+	router.GET("/profiler/start", StartProfilingHandler)
+	router.GET("/profiler/stop", StopProfilingHandler)
 }
 
 // StartProfiling is a function to start profiling automatically without web button
 func StartProfiling() {
-    commandChannel <- startTracking
+	commandChannel <- startTracking
 }
 
 // StopProfiling is a function to stop profiling automatically without web button
 func StopProfiling() {
-    commandChannel <- stopTracking
+	commandChannel <- stopTracking
 }
 
 // StartProfilingHandler is a HTTP Handler to start memory profiling, if we're not already
-func StartProfilingHandler(w http.ResponseWriter, r *http.Request) {
+func StartProfilingHandler(c *gin.Context) {
+	log.Println("StartProfilingHandler")
 	StartProfiling()
 	time.Sleep(500 * time.Millisecond)
-	http.Redirect(w, r, "/profiler/info.html", http.StatusTemporaryRedirect)
+	c.Redirect(http.StatusTemporaryRedirect, "/profiler/info.html")
 }
 
 // StopProfilingHandler is a HTTP Handler to stop memory profiling, if we're profiling
-func StopProfilingHandler(w http.ResponseWriter, r *http.Request) {
+func StopProfilingHandler(c *gin.Context) {
+	log.Println("StopProfilingHandler")
 	StopProfiling()
 	time.Sleep(500 * time.Millisecond)
-	http.Redirect(w, r, "/profiler/info.html", http.StatusTemporaryRedirect)
+	c.Redirect(http.StatusTemporaryRedirect, "/profiler/info.html")
 }
 
 // ProfilingInfoJSONHandler is a HTTP Handler to return JSON of the Heap memory statistics and any extra info the server wants to tell us about
-func ProfilingInfoJSONHandler(w http.ResponseWriter, r *http.Request) {
+func ProfilingInfoJSONHandler(c *gin.Context) {
+	log.Println("ProfilingInfoJSONHandler")
 	// struct for output
 	type outputStruct struct {
 		HeapInfo         []HeapMemStat
@@ -149,15 +155,16 @@ func ProfilingInfoJSONHandler(w http.ResponseWriter, r *http.Request) {
 	// convert to JSON and write to the client
 	js, err := json.Marshal(response)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		c.Error(err)
 		return
 	}
-	w.Header().Set("Content-Type", "application/json")
-	w.Write(js)
+	//w.Write(js)
+	c.Data(http.StatusOK, "application/json", js)
 }
 
 // MemStatsHTMLHandler is a HTTP Handler to fetch memstats.html or memstats-off.html content
-func MemStatsHTMLHandler(w http.ResponseWriter, r *http.Request) {
+func MemStatsHTMLHandler(c *gin.Context) {
+	log.Println("MemStatsHTMLHandler")
 	// Fetch the most recent memory statistics
 	responseChannel := make(chan []TimedMemStats)
 
@@ -177,8 +184,9 @@ func MemStatsHTMLHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if len(response) == 0 {
-		w.Write([]byte(contentOrError("info-off.html")))
+		c.Writer.Write([]byte(contentOrError("info-off.html")))
 		return
 	}
-	w.Write([]byte(contentOrError("info.html")))
+	c.Writer.Write([]byte(contentOrError("info.html")))
+
 }
