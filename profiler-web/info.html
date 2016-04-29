@@ -6,6 +6,7 @@
 	-->
     <script type="text/javascript" src="https://www.google.com/jsapi"></script>
     <script type="text/javascript">
+		var chart;
 		google.load("visualization", "1", {packages:["corechart"]});
 
 		// Fetch the Heap Memory Stats JSON every 1 second, and draw to the chart
@@ -59,7 +60,12 @@
           vAxis: {title: 'Memory Usage', format: "#,###MB", viewWindow: {min: 0}}
         };
 
-		var chart = new google.visualization.LineChart(document.getElementById('chart_div'));
+
+		if (!chart) {
+			chart = new google.visualization.LineChart(document.getElementById('chart_div'));
+		} else {
+			chart.clearChart();
+		}
 		chart.draw(data, options);
       }
     </script>
