@@ -1,11 +1,12 @@
 <html>
-  <head>
+
+<head>
 	<script src="//ajax.googleapis.com/ajax/libs/jquery/1.11.1/jquery.min.js"></script>
 	<!--
 	Display an Google chart showing a service's memory usage.
 	-->
-    <script type="text/javascript" src="https://www.google.com/jsapi"></script>
-    <script type="text/javascript">
+	<script type="text/javascript" src="https://www.google.com/jsapi"></script>
+	<script type="text/javascript">
 		google.load("visualization", "1", {packages:["corechart"]});
 
 		// Fetch the Heap Memory Stats JSON every 1 second, and draw to the chart
@@ -17,7 +18,7 @@
 				success: function (profilingInfo) {
 					// draw the chart
 					drawHeapChart(profilingInfo.HeapInfo);
-
+					
 					// draw the table of extra info
 					var extraInfo = profilingInfo.ExtraServiceInfo
 					if(extraInfo != null) {
@@ -30,6 +31,9 @@
 						}
 						$('#extra_info').append('</table>')
 					}
+					var date = new Date(profilingInfo.UpTime/1e6);
+					$('#up_time').text(formatUpTime(date));
+
 				},
 				complete: function (data) {
 					// Schedule the next poll
@@ -40,6 +44,17 @@
 
 		// fetch the heap memory stats in 1 second
 		setTimeout(fetchHeapMemStats, 1000);
+
+
+		function formatUpTime(date){
+			var hh = date.getUTCHours();
+			var mm = date.getUTCMinutes();
+			var ss = date.getSeconds();
+			if (hh < 10) {hh = "0"+hh;}
+			if (mm < 10) {mm = "0"+mm;}
+			if (ss < 10) {ss = "0"+ss;}
+			return hh + ":" + mm + ":" + ss;
+		}
 
 	function drawHeapChart(heapData) {
 		// build the chart data
@@ -63,18 +78,22 @@
 		chart.draw(data, options);
       }
     </script>
-  </head>
-  <body align="center" style="font-family: Arial">
-	<div style="width=100%; text-align: right">
+</head>
+
+<body align="center" style="font-family: Arial">
+	<div style="width:100%; text-align: right">
 		<a href="/profiler/stop">Stop Profiling</a>
 	</div>
 	<div>
-	    <div id="chart_div" style="width: 1000px; height: 600px; margin: 0 auto;"></div>
+		<div id="chart_div" style="width: 1000px; height: 600px; margin: 0 auto;"></div>
 	</div>
-
+	<div style="width:135px; margin: 0 auto;">
+		Up time: <span style="font-weight: bold;" id="up_time"></span>
+	</div>
 	<div>
 		<h3 style="font-size: 15px;font-weight: bold;">Extra Service Info</h3>
 		<div id="extra_info" style="width:500px; margin: 0 auto;"></div>
 	</div>
-  </body>
+</body>
+
 </html>
