@@ -27,6 +27,9 @@ var (
 	// method we'll use to fetch extra, generic information from the running service
 	extraServiceInfoRetriever      ExtraServiceInfoRetriever
 	extraServiceInfoRetrieverMutex sync.RWMutex
+
+	// startTime is the time that the service started
+	startTime time.Time
 )
 
 // RegisterExtraServiceInfoRetriever sets the function that will provide us with extra service info when requested
@@ -38,6 +41,9 @@ func RegisterExtraServiceInfoRetriever(infoRetriever ExtraServiceInfoRetriever) 
 }
 
 func init() {
+	// initialize the start time with the current time
+	startTime = time.Now().Round(time.Second)
+
 	// channel that this class uses to execute start/stop commands
 	commandChannel = make(chan int)
 
@@ -103,12 +109,12 @@ func AddMemoryProfilingHandlers() {
 
 // StartProfiling is a function to start profiling automatically without web button
 func StartProfiling() {
-    commandChannel <- startTracking
+	commandChannel <- startTracking
 }
 
 // StopProfiling is a function to stop profiling automatically without web button
 func StopProfiling() {
-    commandChannel <- stopTracking
+	commandChannel <- stopTracking
 }
 
 // StartProfilingHandler is a HTTP Handler to start memory profiling, if we're not already
@@ -130,9 +136,13 @@ func ProfilingInfoJSONHandler(w http.ResponseWriter, r *http.Request) {
 	// struct for output
 	type outputStruct struct {
 		HeapInfo         []HeapMemStat
+		UpTime           int64
 		ExtraServiceInfo map[string]interface{}
 	}
 	response := outputStruct{}
+
+	// calculate the uptime
+	response.UpTime = time.Now().Round(time.Second).Sub(startTime).Nanoseconds()
 
 	// Fetch the most recent memory statistics
 	responseChannel := make(chan []TimedMemStats)
